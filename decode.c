@@ -6,18 +6,19 @@
 void decode(FILE *f1, FILE *f2)
 {
 	node tree;
-	char alphabet[256] = { 0 };
-	char code[512] = { 0 };
-	unsigned char buf[9] = { 0 };
 	unsigned int i,
 		n_text,
 		n_alphabet,
 		k1,
 		k0,
-		j;
+		j,
+		k,
+		i_out_pos;
 	unsigned char c;
 	i = 0;
 
+	unsigned char* buf = (char*)malloc(BUF_SIZE * sizeof(char));
+	unsigned char* buf_out = (char*)malloc(BUF_SIZE * sizeof(char));
 	if (fread(buf, sizeof(char), 4, f1)==4)
 		n_text = buf[3] + (buf[2] << 8) + (buf[1] << 16) + (buf[0] << 24);
 	else 
@@ -25,14 +26,17 @@ void decode(FILE *f1, FILE *f2)
 	k1 = 0;
 	k0 = 0;
 	j = 0;
-
+	i = 0;
+	unsigned char* code = (char*)malloc(2* N * sizeof(char));
+	fread(buf, sizeof(char), BUF_SIZE, f1);
 	do
 	{
-		fread(&c, sizeof(char), 1, f1);
+		c = buf[i];
+		i++;
 		char_to_bin(code + j, c);
-		for (i = 0; i < 8; i++)
+		for (k = 0; k < 8; k++)
 		{
-			if (code[j + i] == '0')
+			if (code[j + k] == '0')
 				k0++;
 			else k1++;
 			if (k1 == k0 + 1)
@@ -42,37 +46,50 @@ void decode(FILE *f1, FILE *f2)
 	} while (k1 != k0 + 1);
 
 	n_alphabet = k1;
-
-	for (i = 0; i < n_alphabet; i++)
+	unsigned char* alphabet = (char*)malloc(N * sizeof(char));
+	for (k = 0; k < n_alphabet; k++)
 	{
-		fread(&c, sizeof(char), 1, f1);
-		alphabet[i] = c;
+		alphabet[k] = buf[i];
+		i++;
 	}
 
-	i = 0;
+	k = 0;
 	j = 0;
-
-	code_to_tree(&tree, code, alphabet, &j, &i);
+	i_out_pos = 0;
+	code_to_tree(&tree, code, alphabet, &j, &k);
+	free(code);
+	free(alphabet);
 	node *p;
 	p = &tree;
-	i = 0;
-
+	k = 0;
+	j = 0;
 	if (n_alphabet == 1)
 	{
 		c = p->sym;
-		for (i = 0; i < n_text; i++)
+		for (j = 0; j < BUF_SIZE; j++)
+			buf_out[j] = c;
+		while (n_text > BUF_SIZE)
 		{
-			fwrite(&c, sizeof(char), 1, f2);
+			fwrite(buf_out, sizeof(char), BUF_SIZE, f2);
+			n_text -= BUF_SIZE;
 		}
+		fwrite(buf_out, sizeof(char), n_text, f2);
 	}
 	else
-		while (i < n_text)
+		while (k < n_text)
 		{
-			fread(&c, sizeof(char), 1, f1);
-			char_to_bin(buf, c);
+			unsigned char* bit_buf = (char*)malloc(8 * sizeof(char));
+			c = buf[i];
+			i++;
+			if (i == BUF_SIZE)
+			{
+				fread(buf, sizeof(char), BUF_SIZE, f1);
+				i = 0;
+			}
+			char_to_bin(bit_buf, c);
 			for (j = 0; j < 8; j++)
 			{
-				if (buf[j] == '0')
+				if (bit_buf[j] == '0')
 				{
 					p = p->left;
 				}
@@ -80,15 +97,25 @@ void decode(FILE *f1, FILE *f2)
 				if (p->left == NULL)
 				{
 					c = p->sym;
-					fwrite(&c, sizeof(char), 1, f2);
+					buf_out[i_out_pos] = c;
+					i_out_pos++;
+					if (i_out_pos == BUF_SIZE)
+					{
+						fwrite(buf_out, sizeof(char), BUF_SIZE, f2);
+						i_out_pos = 0;
+					}
 					p = &tree;
-					i++;
-					if (i >= n_text)
+					k++;
+					if (k >= n_text)
 						break;
 				}
 			}
 			j = 0;
+			free(bit_buf);
 		}
+	fwrite(buf_out, sizeof(char), i_out_pos, f2);
+	free(buf_out);
+	free(buf);
 }
 
 
