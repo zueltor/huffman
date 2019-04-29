@@ -6,36 +6,37 @@
 void decode(FILE *f1, FILE *f2) {
     node tree;
     unsigned int i = 0,
-            n_text,
+            n_text = 0,
             n_alphabet,
-            k1 = 0,
-            k0 = 0,
             j = 0,
             k,
             i_out_pos = 0;
     unsigned char c,
             bit_buf[8];
 
-    unsigned char *buf = (char *) malloc(BUF_SIZE * sizeof(char));
+    unsigned char *buf = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
     if (buf == NULL) {
         //printf("mem error");
         exit(1);
     }
-    unsigned char *buf_out = (char *) malloc(BUF_SIZE * sizeof(char));
+    unsigned char *buf_out = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
     if (buf_out == NULL) {
         //printf("mem error");
         exit(1);
     }
     if (fread(buf, sizeof(char), 4, f1) == 4)
-        n_text = buf[3] + (buf[2] << 8) + (buf[1] << 16) + (buf[0] << 24);
+        n_text = buf[3] + (buf[2] << 8u) + (buf[1] << 16u) + (buf[0] << 24u);
     //else
     //return;
-    unsigned char *code = (char *) malloc(2 * N * sizeof(char));
+    unsigned char *code = (unsigned char *) malloc(2 * N * sizeof(char));
     if (code == NULL) {
         //printf("mem error");
         exit(1);
     }
     fread(buf, sizeof(char), BUF_SIZE, f1);
+
+    unsigned int k1 = 0,
+            k0 = 0;
     do {
         c = buf[i];
         i++;
@@ -51,7 +52,7 @@ void decode(FILE *f1, FILE *f2) {
     } while (k1 != k0 + 1);
 
     n_alphabet = k1;
-    unsigned char *alphabet = (char *) malloc(N * sizeof(char));
+    unsigned char *alphabet = (unsigned char *) malloc(N * sizeof(char));
     if (alphabet == NULL) {
         //printf("mem error");
         exit(1);
@@ -132,7 +133,6 @@ void code_to_tree(node *p, unsigned char *code, unsigned char *a, unsigned int *
         *posc += 1;
         code_to_tree(p->right, code, a, posa, posc);
     }
-    return;
 }
 
 unsigned int char_to_bin(unsigned char *buf, unsigned int c) {

@@ -26,14 +26,12 @@ void build_tree(node *p, unsigned int n);
 
 node tree_merge(node p1, node p2);
 
-void get_codes(codes *leaf, node *p, unsigned char *buf, unsigned int pos, unsigned char *treecode, unsigned int *i,
+void get_codes(codes *syn_codes, node *p, unsigned char *buf, unsigned int pos, unsigned char *treecode, unsigned int *i,
                unsigned char *alphabet, unsigned int *k);
 
-void fout_code(FILE *f1, FILE *f2, codes *leaf, unsigned char *buf);
+void f_write_code(FILE *f1, FILE *f2, codes *sym_codes, unsigned char *buf);
 
-void bin_to_char(unsigned char *s, unsigned int n, unsigned char *res);
-
-unsigned char last_char(unsigned char *s, unsigned int n);
+void bin_text_to_char(unsigned char *s, unsigned int n, unsigned char *res);
 
 void decode(FILE *f1, FILE *f2);
 

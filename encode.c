@@ -16,20 +16,21 @@ void encode(FILE *f1, FILE *f2) {
     cur_pos = ftell(f1);
     n = 0;
 
-    unsigned int *a = (int *) malloc(N * sizeof(int));
-    if (a == NULL) {
+    unsigned int *frequencies = (unsigned int *) malloc(N * sizeof(int));
+    if (frequencies == NULL) {
         //printf("mem error");
         exit(1);
     }
-    unsigned char *buf = (char *) malloc(BUF_SIZE * sizeof(char));
+    unsigned char *buf = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
     if (buf == NULL) {
         //printf("mem error");
         exit(1);
     }
-    memset(a, 0, N * sizeof(int));
+    memset(frequencies, 0, N * sizeof(int));
+
     while ((r = fread(buf, sizeof(char), BUF_SIZE, f1)) && (r > 0)) {
         for (i = 0; i < r; i++) {
-            a[buf[i]]++;
+            frequencies[buf[i]]++;
             n++;
         }
     }
@@ -42,7 +43,7 @@ void encode(FILE *f1, FILE *f2) {
     n = 0;
 
     for (i = 0; i < N; i++) {
-        if (a[i] > 0)
+        if (frequencies[i] > 0)
             n++;
     }
 
@@ -52,55 +53,74 @@ void encode(FILE *f1, FILE *f2) {
         //printf("mem error");
         exit(1);
     }
-    codes *leaf = (codes *) malloc(N * sizeof(codes));
-    if (leaf == NULL) {
+    codes *sym_codes = (codes *) malloc(N * sizeof(codes));
+    if (sym_codes == NULL) {
         //printf("mem error");
         exit(1);
     }
     j = 0;
     for (i = 0; i < N; i++) {
-        leaf[i].code = (char *) malloc(sizeof(char) * 32);
-        if (a[i] > 0) {
-            tree[j].freq = a[i];
+        sym_codes[i].code = (unsigned char *) malloc(sizeof(char) * 32);
+        if (frequencies[i] > 0) {
+            tree[j].freq = frequencies[i];
             tree[j].sym = i;
             tree[j].left = NULL;
             tree[j].right = NULL;
             j++;
         }
     }
-    unsigned char *alphabet = (char *) malloc(n * sizeof(char));
+
     psort(tree, n);
     build_tree(tree, n);
 
 
-    unsigned char treecode[2 * N] = {0};
-
+    unsigned char tree_code[2 * N] = {0};
+    unsigned char *alphabet = (unsigned char *) malloc(n * sizeof(char));
     n = 0;
     i = 0;
-    get_codes(leaf, tree, buf, 0, treecode, &i, alphabet, &n);
+
+    get_codes(sym_codes, tree, buf, 0, tree_code, &i, alphabet, &n);
 
     free(tree);
     fseek(f1, cur_pos, SEEK_SET);
 
-    bin_to_char(treecode, i, buf);
+    bin_text_to_char(tree_code, i, buf);
     i = (i % 8) ? i / 8 + 1 : i / 8;
 
     fwrite(buf, sizeof(char), i, f2);
     fwrite(alphabet, sizeof(char), j, f2);
     free(alphabet);
 
-    fout_code(f1, f2, leaf, buf);
+    f_write_code(f1, f2, sym_codes, buf);
     free(buf);
-    free(leaf);
+    free(sym_codes);
 }
 
 void int_to_str(unsigned int n, unsigned char *buf, unsigned int mode) {
     if (mode) {
-        buf[0] = (n >> 24) & 0xFF;
-        buf[1] = (n >> 16) & 0xFF;
-        buf[2] = (n >> 8) & 0xFF;
-        buf[3] = n & 0xFF;
-    } else buf[0] = n & 0xFF;
+        buf[0] = (n >> 24u) & 0xFFu;
+        buf[1] = (n >> 16u) & 0xFFu;
+        buf[2] = (n >> 8u) & 0xFFu;
+        buf[3] = n & 0xFFu;
+    } else buf[0] = n & 0xFFu;
+}
+
+void bin_text_to_char(unsigned char *s, unsigned int n, unsigned char *res) {
+    unsigned char c = 0;
+    unsigned int i,
+            k = 0;
+    while (n > 7) {
+        for (i = 0; i < 8; i++)
+            c = (c << 1u) + s[k * 8 + i] - '0';
+        res[k] = c;
+        k++;
+        n = n - 8;
+    }
+    for (i = 0; i < n; i++) {
+        c = (c << 1u) + s[i + k * 8] - '0';
+    }
+    c = (c << (8 - n));
+    res[k] = c;
 }
 
 void build_tree(node *p, unsigned int n) {
@@ -116,7 +136,6 @@ void build_tree(node *p, unsigned int n) {
             p[j] = p[j + 1];
             p[j + 1] = tmp;
             j--;
-
         }
     }
 }
@@ -131,34 +150,35 @@ node tree_merge(node p1, node p2) {
     return p;
 }
 
-void get_codes(codes *leaf, node *p, unsigned char *buf, unsigned int pos, unsigned char *treecode, unsigned int *i,
-               unsigned char *alphabet, unsigned int *k) {
+void
+get_codes(codes *sym_codes, node *p, unsigned char *buf, unsigned int pos, unsigned char *tree_code, unsigned int *i,
+          unsigned char *alphabet, unsigned int *j) {
     if (p->left == NULL) {
-        treecode[*i] = '1';
+        tree_code[*i] = '1';
         *i += 1;
-        unsigned char *s = (char *) malloc(sizeof(char) * 32);
+        unsigned char *s = (unsigned char *) malloc(sizeof(char) * 32);
         if (s == NULL) {
             //printf("mem error");
             exit(1);
         }
-        bin_to_char(buf, pos, s);
-        for (unsigned int i = 0; i <= pos / 8; i++) {
-            leaf[p->sym].code[i] = s[i];
+        bin_text_to_char(buf, pos, s);
+        for (unsigned int k = 0; k <= pos / 8; k++) {
+            sym_codes[p->sym].code[k] = s[k];
         }
-        leaf[p->sym].length = pos;
-        alphabet[*k] = p->sym;
-        *k += 1;
+        sym_codes[p->sym].length = pos;
+        alphabet[*j] = p->sym;
+        *j += 1;
         return;
     }
     buf[pos] = '0';
-    treecode[*i] = '0';
+    tree_code[*i] = '0';
     *i += 1;
-    get_codes(leaf, p->left, buf, pos + 1, treecode, i, alphabet, k);
+    get_codes(sym_codes, p->left, buf, pos + 1, tree_code, i, alphabet, j);
     buf[pos] = '1';
-    get_codes(leaf, p->right, buf, pos + 1, treecode, i, alphabet, k);
+    get_codes(sym_codes, p->right, buf, pos + 1, tree_code, i, alphabet, j);
 }
 
-void fout_code(FILE *f1, FILE *f2, codes *leaf, unsigned char *buf) {
+void f_write_code(FILE *f1, FILE *f2, codes *sym_codes, unsigned char *buf) {
     unsigned char c,
             c_out = 0,
             sym;
@@ -171,7 +191,7 @@ void fout_code(FILE *f1, FILE *f2, codes *leaf, unsigned char *buf) {
             k = 0,
             i_out_pos = 0;
 
-    unsigned char *buf_out = (char *) malloc(BUF_SIZE * sizeof(char));
+    unsigned char *buf_out = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
     if (buf_out == NULL) {
         //printf("mem error");
         exit(1);
@@ -180,10 +200,10 @@ void fout_code(FILE *f1, FILE *f2, codes *leaf, unsigned char *buf) {
     while ((r = fread(buf, sizeof(char), BUF_SIZE, f1)) && (r > 0)) {
         for (i = 0; i < r; i++) {
             c = buf[i];
-            bit_length = leaf[(unsigned int) c].length;
+            bit_length = sym_codes[(unsigned int) c].length;
             while (bit_length > 0) {
                 if (k >= bit_pos) {
-                    sym = leaf[(unsigned int) c].code[j] << bit_pos;
+                    sym = sym_codes[(unsigned int) c].code[j] << bit_pos;
                     c_out = c_out + (sym >> k);
                     if (bit_length < 8 - k) {
                         k = k + bit_length;
@@ -204,13 +224,13 @@ void fout_code(FILE *f1, FILE *f2, codes *leaf, unsigned char *buf) {
                     }
 
                 } else if (k < bit_pos) {
-                    sym = leaf[(unsigned int) c].code[j] << bit_pos;
+                    sym = sym_codes[(unsigned int) c].code[j] << bit_pos;
                     c_out = c_out + (sym >> k);
                     if (8 - bit_pos < bit_length) {
                         k = k + 8 - bit_pos;
                         bit_length = bit_length - (8 - bit_pos);
                         bit_pos = 0;
-                        sym = leaf[(unsigned int) c].code[++j] >> (k);
+                        sym = sym_codes[(unsigned int) c].code[++j] >> (k);
                         c_out = c_out + (sym);
                         if (8 - k <= bit_length) {
                             bit_pos = 8 - k;
