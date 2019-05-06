@@ -17,15 +17,9 @@ void encode(FILE *f1, FILE *f2) {
     n = 0;
 
     unsigned int *frequencies = (unsigned int *) malloc(N * sizeof(int));
-    if (frequencies == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     unsigned char *buf = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
-    if (buf == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     memset(frequencies, 0, N * sizeof(int));
 
     while ((r = fread(buf, sizeof(char), BUF_SIZE, f1)) && (r > 0)) {
@@ -47,17 +41,10 @@ void encode(FILE *f1, FILE *f2) {
             n++;
     }
 
-
     node *tree = (node *) malloc(n * sizeof(node));
-    if (tree == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     codes *sym_codes = (codes *) malloc(N * sizeof(codes));
-    if (sym_codes == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     j = 0;
     for (i = 0; i < N; i++) {
         sym_codes[i].code = (unsigned char *) malloc(sizeof(char) * 32);
@@ -157,10 +144,7 @@ get_codes(codes *sym_codes, node *p, unsigned char *buf, unsigned int pos, unsig
         tree_code[*i] = '1';
         *i += 1;
         unsigned char *s = (unsigned char *) malloc(sizeof(char) * 32);
-        if (s == NULL) {
-            //printf("mem error");
-            exit(1);
-        }
+
         bin_text_to_char(buf, pos, s);
         for (unsigned int k = 0; k <= pos / 8; k++) {
             sym_codes[p->sym].code[k] = s[k];
@@ -182,7 +166,6 @@ void f_write_code(FILE *f1, FILE *f2, codes *sym_codes, unsigned char *buf) {
     unsigned char c,
             c_out = 0,
             sym;
-
     unsigned int i,
             bit_pos = 0,
             bit_length,
@@ -192,10 +175,7 @@ void f_write_code(FILE *f1, FILE *f2, codes *sym_codes, unsigned char *buf) {
             i_out_pos = 0;
 
     unsigned char *buf_out = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
-    if (buf_out == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
 
     while ((r = fread(buf, sizeof(char), BUF_SIZE, f1)) && (r > 0)) {
         for (i = 0; i < r; i++) {
@@ -229,7 +209,6 @@ void f_write_code(FILE *f1, FILE *f2, codes *sym_codes, unsigned char *buf) {
                     if (8 - bit_pos < bit_length) {
                         k = k + 8 - bit_pos;
                         bit_length = bit_length - (8 - bit_pos);
-                        bit_pos = 0;
                         sym = sym_codes[(unsigned int) c].code[++j] >> (k);
                         c_out = c_out + (sym);
                         if (8 - k <= bit_length) {

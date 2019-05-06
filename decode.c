@@ -15,24 +15,15 @@ void decode(FILE *f1, FILE *f2) {
             bit_buf[8];
 
     unsigned char *buf = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
-    if (buf == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     unsigned char *buf_out = (unsigned char *) malloc(BUF_SIZE * sizeof(char));
-    if (buf_out == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     if (fread(buf, sizeof(char), 4, f1) == 4)
         n_text = buf[3] + (buf[2] << 8u) + (buf[1] << 16u) + (buf[0] << 24u);
     //else
     //return;
     unsigned char *code = (unsigned char *) malloc(2 * N * sizeof(char));
-    if (code == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     fread(buf, sizeof(char), BUF_SIZE, f1);
 
     unsigned int k1 = 0,
@@ -53,10 +44,7 @@ void decode(FILE *f1, FILE *f2) {
 
     n_alphabet = k1;
     unsigned char *alphabet = (unsigned char *) malloc(N * sizeof(char));
-    if (alphabet == NULL) {
-        //printf("mem error");
-        exit(1);
-    }
+
     for (k = 0; k < n_alphabet; k++) {
         alphabet[k] = buf[i];
         i++;
