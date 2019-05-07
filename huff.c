@@ -1,5 +1,3 @@
-#define _CRT_SECURE_NO_WARNINGS
-
 #include <stdio.h>
 #include <string.h>
 #include "header.h"
@@ -9,11 +7,11 @@ unsigned int huffman(char *mode, char *in, char *out) {
     FILE *f2 = fopen(out, "wb");
 
     if (f1 == NULL) {
-        printf("error %s", in);
+        printf("error: %s cannot be opened", in);
         return 1;
     }
     if (f2 == NULL) {
-        printf("error %s", out);
+        printf("error: %s cannot be opened", out);
         return 1;
     }
 
